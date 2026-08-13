@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>排柜工具（离线单文件版）</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+    background: #f8fafc; color: #1e293b; font-size: 14px; line-height: 1.6;
+  }
+  .notice {
+    background: #fff7ed; border-bottom: 1px solid #fed7aa; color: #9a3412;
+    padding: 8px 20px; font-size: 13px;
+  }
+  header { background: #0f172a; color: #fff; }
+  .header-inner { max-width: 1200px; margin: 0 auto; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 700; }
+  nav { display: flex; gap: 8px; }
+  nav button {
+    padding: 6px 12px; border-radius: 6px; border: none; cursor: pointer;
+    background: transparent; color: #cbd5e1; font-size: 14px;
+  }
+  nav button:hover { color: #fff; }
+  nav button.active { background: #fff; color: #0f172a; }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 20px; }
+  .section { display: none; }
+  .section.active { display: block; }
+  .card { background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,.1); padding: 20px; margin-bottom: 20px; }
+  .card h2 { font-size: 17px; font-weight: 700; color: #7f1d1d; margin-bottom: 14px; }
+  table.data { width: 100%; border-collapse: collapse; }
+  table.data th, table.data td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+  table.data th { background: #f1f5f9; }
+  table.rules th { background: #f1f5f9; }
+  .btn {
+    display: inline-block; padding: 8px 16px; border-radius: 6px; border: none; cursor: pointer;
+    font-size: 14px; text-decoration: none;
+  }
+  .btn-blue { background: #2563eb; color: #fff; }
+  .btn-blue:hover { background: #1d4ed8; }
+  .btn-slate { background: #475569; color: #fff; }
+  .btn-slate:hover { background: #334155; }
+  .btn-green { background: #059669; color: #fff; }
+  .btn-green:hover { background: #047857; }
+  .btn-gray { background: #e2e8f0; color: #334155; }
+  .btn-gray:hover { background: #cbd5e1; }
+  .btn-red { background: #b91c1c; color: #fff; font-weight: 600; }
+  .btn-red:hover { background: #991b1b; }
+  .btn-red:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-sm { padding: 4px 10px; font-size: 13px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 16px; }
+  .field { display: flex; flex-direction: column; }
+  .field label { font-size: 13px; color: #64748b; margin-bottom: 4px; }
+  .field input { border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; font-size: 14px; }
+  .toolbar .spacer { flex: 1; }
+  .table-wrap { overflow: auto; max-height: 70vh; border-radius: 8px; }
+  .table-wrap input { width: 100%; border: none; padding: 4px 6px; font-size: 13px; background: transparent; }
+  .table-wrap input:focus { outline: none; background: #eff6ff; border-radius: 4px; }
+  .del { color: #dc2626; cursor: pointer; font-size: 12px; background: none; border: none; }
+  .del:hover { text-decoration: underline; }
+  .hint { color: #64748b; font-size: 13px; margin-top: 10px; }
+  .warn-box { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; }
+  .warn-box ul { padding-left: 20px; }
+  .result-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .result-wrap { overflow: auto; max-height: 72vh; border-radius: 8px; }
+  .result-wrap table { border-collapse: collapse; min-width: 1560px; width: 100%; }
+  .result-wrap th, .result-wrap td { border: 1px solid #cbd5e1; padding: 5px 8px; white-space: nowrap; font-size: 13px; }
+  .title-row { background: #8B0000; color: #fff; font-size: 17px; font-weight: 700; text-align: left; padding: 12px 10px !important; }
+  .head-row th { background: #FFF2CC; font-weight: 600; color: #334155; }
+  .subtotal-row td { background: #FFFF00; font-weight: 600; }
+  .total-row td { background: #ffffff; font-weight: 700; }
+  .q-col { text-align: center; font-weight: 600; }
+  .item-q { background: #FFFDE7; }
+  /* 粘贴弹窗 */
+  .modal-mask { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.5); z-index: 50; align-items: center; justify-content: center; }
+  .modal-mask.open { display: flex; }
+  .modal { background: #fff; border-radius: 10px; padding: 20px; width: 90%; max-width: 720px; }
+  .modal h3 { font-size: 16px; margin-bottom: 10px; }
+  .modal textarea { width: 100%; height: 220px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; font-family: Consolas, monospace; font-size: 13px; }
+  .modal .btns { display: flex; gap: 10px; margin-top: 12px; justify-content: flex-end; }
+</style>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+</head>
+<body>
+
+<!-- 双击本文件即可在浏览器中打开使用，无需安装任何软件 -->
+<div class="notice">本页面为单文件离线版，双击即可在浏览器中打开使用，无需 Node.js / npm / 网络。数据仅在本机内存中计算，不会上传。</div>
+
+<header>
+  <div class="header-inner">
+    <h1>排柜工具</h1>
+    <nav>
+      <button class="tab-btn active" data-tab="rules">排柜规则</button>
+      <button class="tab-btn" data-tab="data">数据录入</button>
+      <button class="tab-btn" data-tab="result">排柜结果</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- 规则页 -->
+  <section id="tab-rules" class="section active">
+    <div class="card">
+      <h2>一、柜型规格</h2>
+      <table class="data rules">
+        <thead><tr><th>柜型代码</th><th>柜型名称</th><th>体积上限</th><th>毛重上限</th></tr></thead>
+        <tbody>
+          <tr><td>40HQ</td><td>40HQ 常温大柜</td><td>≤68CBM（排柜硬约束按 ≤65CBM 执行）</td><td>≤26000KG</td></tr>
+          <tr><td>40RF</td><td>40RF 冷冻大柜</td><td>≤50CBM</td><td>≤22000KG</td></tr>
+          <tr><td>20GP</td><td>20GP 常温小柜</td><td>≤26CBM</td><td>≤17000KG</td></tr>
+          <tr><td>20RF</td><td>20RF 冷冻小柜</td><td>≤20CBM</td><td>≤17000KG</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2>二、排柜策略（优先级从高到低）</h2>
+      <ol style="padding-left:22px; line-height:2;">
+        <li><b style="color:#b91c1c;">硬约束：</b>各柜体积 ≤65CBM、毛重不超过柜型上限、常温/冷冻分离。</li>
+        <li><b style="color:#b91c1c;">大类优先：</b>食材尽可能同柜，包材 / 设备 / 工装可混放。</li>
+        <li><b style="color:#b91c1c;">利用率约 90%：</b>体积和重量尽量落在 85% ~ 95% 区间。</li>
+        <li><b style="color:#b91c1c;">物料最多拆 2 份：</b>单个物料最多拆分到 2 个柜。</li>
+        <li><b style="color:#b91c1c;">软约束：</b>同物料尽量同柜，其次同厂家相邻。</li>
+      </ol>
+    </div>
+    <div class="card">
+      <h2>三、输出格式</h2>
+      <ul style="padding-left:22px; line-height:2;">
+        <li><b>标题行</b>：深红色，显示订单号。</li>
+        <li><b>表头</b>：浅黄色背景。</li>
+        <li><b>合计行</b>：黄色背景，含柜型名称 / 货物数 / 箱数 / 总体积 / 总净重 / 总毛重。</li>
+        <li><b>总计行</b>：白色背景，汇总柜型组合与总量。</li>
+        <li><b>右侧 Q 列</b>：柜号序号。</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>四、使用流程</h2>
+      <ol style="padding-left:22px; line-height:2;">
+        <li>在「数据录入」页手动添加、粘贴 Excel 数据、导入 CSV，或加载示例。</li>
+        <li>填写订单号，点击「开始排柜」。</li>
+        <li>在「排柜结果」页查看结果，并导出 CSV。</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 数据录入页 -->
+  <section id="tab-data" class="section">
+    <div class="card">
+      <div class="toolbar">
+        <div class="field">
+          <label>订单号</label>
+          <input id="order-no" type="text" placeholder="如 PO20260813" style="width:200px;" />
+        </div>
+        <button class="btn btn-blue" id="btn-import">导入 CSV</button>
+        <input type="file" id="file-input" accept=".csv,.txt" style="display:none;" />
+        <button class="btn btn-slate" id="btn-paste">粘贴数据</button>
+        <button class="btn btn-green" id="btn-sample">加载示例</button>
+        <button class="btn btn-gray" id="btn-clear">清空</button>
+        <div class="spacer"></div>
+        <button class="btn btn-red" id="btn-calc">开始排柜</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th style="width:36px;">#</th>
+              <th>物料编码</th>
+              <th>物料名称</th>
+              <th>大类</th>
+              <th>厂家</th>
+              <th>温度属性</th>
+              <th>箱数</th>
+              <th>单箱体积(CBM)</th>
+              <th>单箱净重(KG)</th>
+              <th>单箱毛重(KG)</th>
+              <th style="width:56px;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="data-body"></tbody>
+        </table>
+      </div>
+      <div class="hint">提示：可手动添加行；或点击「粘贴数据」，将 Excel 中复制的表格（含表头）粘贴后自动解析；或导入 CSV 文件（首行需为列名）。</div>
+      <button class="btn btn-slate btn-sm" id="btn-add" style="margin-top:10px;">+ 添加行</button>
+    </div>
+  </section>
+
+  <!-- 结果页 -->
+  <section id="tab-result" class="section">
+    <div class="result-toolbar">
+      <h2 style="font-size:17px;">排柜结果</h2>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-gray" id="btn-back">返回录入</button>
+        <button class="btn btn-green" id="btn-export-xlsx">导出 Excel（带颜色）</button>
+        <button class="btn btn-blue" id="btn-export">导出 CSV</button>
+      </div>
+    </div>
+    <div id="result-warnings"></div>
+    <div id="result-empty" class="hint" style="text-align:center; padding:60px 0;">暂无排柜结果，请先在「数据录入」中添加数据并开始排柜。</div>
+    <div class="result-wrap" id="result-wrap" style="display:none;"></div>
+  </section>
+</main>
+
+<!-- 粘贴弹窗 -->
+<div class="modal-mask" id="paste-modal">
+  <div class="modal">
+    <h3>粘贴数据（从 Excel 复制，含表头，Tab 分隔）</h3>
+    <textarea id="paste-text" placeholder="物料名称	大类	厂家	温度属性	箱数	单箱体积	单箱净重	单箱毛重&#10;示例物料	食材	示例厂家	常温	100	0.05	10	11"></textarea>
+    <div class="btns">
+      <button class="btn btn-gray" id="paste-cancel">取消</button>
+      <button class="btn btn-blue" id="paste-ok">解析并导入</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============ 排柜规则与算法（严格沿用 src/lib/paigui.js 实现） ============
+const CONTAINER_TYPES = {
+  '40HQ': { key: '40HQ', name: '40HQ常温大柜', specVol: 68, maxVol: 65, maxWeight: 26000, temp: '常温', size: '大柜' },
+  '40RF': { key: '40RF', name: '40RF冷冻大柜', specVol: 50, maxVol: 50, maxWeight: 22000, temp: '冷冻', size: '大柜' },
+  '20GP': { key: '20GP', name: '20GP常温小柜', specVol: 26, maxVol: 26, maxWeight: 17000, temp: '常温', size: '小柜' },
+  '20RF': { key: '20RF', name: '20RF冷冻小柜', specVol: 20, maxVol: 20, maxWeight: 17000, temp: '冷冻', size: '小柜' },
+};
+const LARGE_TYPE = { '常温': '40HQ', '冷冻': '40RF' };
+const SMALL_TYPE = { '常温': '20GP', '冷冻': '20RF' };
+
+function toNum(v) {
+  const n = parseFloat(String(v == null ? '' : v).replace(/[^\d.\-]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function normalizeMaterials(rows) {
+  const materials = [];
+  const warnings = [];
+  (rows || []).forEach((r, i) => {
+    const code = String(r['物料编码'] != null ? r['物料编码'] : (r.code != null ? r.code : '')).trim();
+    const name = String(r['物料名称'] != null ? r['物料名称'] : (r.name != null ? r.name : '')).trim();
+    if (!name) {
+      warnings.push('第 ' + (i + 1) + ' 行缺少物料名称，已跳过');
+      return;
+    }
+    const category = String(r['大类'] != null ? r['大类'] : (r.category != null ? r.category : '')).trim() || '未分类';
+    const factory = String(r['厂家'] != null ? r['厂家'] : (r.factory != null ? r.factory : '')).trim() || '未知厂家';
+
+    let temp = String(r['温度属性'] != null ? r['温度属性'] : (r.temp != null ? r.temp : '')).trim();
+    if (/冻|冷藏|冷/.test(temp)) temp = '冷冻';
+    else if (/常温|常/.test(temp)) temp = '常温';
+    else temp = '常温';
+
+    const boxes = Math.round(toNum(r['箱数'] != null ? r['箱数'] : r.boxes));
+    const perVol = toNum(r['单箱体积'] != null ? r['单箱体积'] : r.perVol);
+    const perNet = toNum(r['单箱净重'] != null ? r['单箱净重'] : r.perNet);
+    const perWeight = toNum(r['单箱毛重'] != null ? r['单箱毛重'] : r.perWeight);
+
+    if (boxes <= 0 || perVol <= 0) {
+      warnings.push('物料「' + name + '」的箱数或单箱体积无效，已跳过');
+      return;
+    }
+    materials.push({ code: code, name: name, category: category, factory: factory, temp: temp, boxes: boxes, perVol: perVol, perNet: perNet, perWeight: perWeight });
+  });
+  return { materials: materials, warnings: warnings };
+}
+
+function makeContainer(temp, typeKey) {
+  const t = CONTAINER_TYPES[typeKey];
+  return {
+    id: '', type: typeKey, typeName: t.name, temp: temp,
+    maxVol: t.maxVol, maxWeight: t.maxWeight, usedVol: 0, usedWeight: 0, items: [],
+  };
+}
+
+function canFit(c, item, n) {
+  return (c.usedVol + item.perVol * n <= c.maxVol + 1e-6) &&
+         (c.usedWeight + item.perWeight * n <= c.maxWeight + 1e-6);
+}
+
+function maxFit(c, item) {
+  const byVol = Math.floor((c.maxVol - c.usedVol) / item.perVol);
+  const byWeight = item.perWeight > 0 ? Math.floor((c.maxWeight - c.usedWeight) / item.perWeight) : Infinity;
+  return Math.max(0, Math.min(byVol, byWeight));
+}
+
+function place(c, item, n) {
+  c.items.push(Object.assign({}, item, { boxes: n }));
+  c.usedVol += item.perVol * n;
+  c.usedWeight += item.perWeight * n;
+}
+
+function round(v, d) { d = d == null ? 2 : d; return Math.round(v * Math.pow(10, d)) / Math.pow(10, d); }
+
+function runPaigui(rawRows, options) {
+  options = options || {};
+  const norm = normalizeMaterials(rawRows);
+  const materials = norm.materials;
+  const warnings = norm.warnings;
+  const orderNo = options.orderNo || '';
+  const containers = [];
+  let seq = 0;
+
+  const groups = { '常温': [], '冷冻': [] };
+  materials.forEach(function (m) { groups[m.temp].push(m); });
+
+  ['常温', '冷冻'].forEach(function (temp) {
+    const items = groups[temp];
+    if (items.length === 0) return;
+
+    items.sort(function (a, b) {
+      return a.factory.localeCompare(b.factory, 'zh') || a.name.localeCompare(b.name, 'zh');
+    });
+
+    const open = [];
+    function openNew() {
+      const c = makeContainer(temp, LARGE_TYPE[temp]);
+      seq += 1;
+      c.id = '柜' + seq;
+      containers.push(c);
+      open.push(c);
+      return c;
+    }
+
+    items.forEach(function (item) {
+      let remaining = item.boxes;
+
+      // 阶段1：尝试整票物料装入单个已有柜（优先同厂家）
+      let whole = null;
+      open.forEach(function (c) {
+        if (!canFit(c, item, remaining)) return;
+        if (!whole) { whole = c; return; }
+        const cSameFactory = c.items.some(function (x) { return x.factory === item.factory; });
+        const wSameFactory = whole.items.some(function (x) { return x.factory === item.factory; });
+        const freeC = (c.maxVol - c.usedVol) + (c.maxWeight - c.usedWeight) / 1000;
+        const freeW = (whole.maxVol - whole.usedVol) + (whole.maxWeight - whole.usedWeight) / 1000;
+        if (cSameFactory && !wSameFactory) whole = c;
+        else if (cSameFactory === wSameFactory && freeC < freeW) whole = c;
+      });
+      if (whole) { place(whole, item, remaining); return; }
+
+      // 阶段2：拆分为最多 2 份
+      let best = null, bestFit = 0;
+      open.forEach(function (c) {
+        const f = maxFit(c, item);
+        if (f > 0 && f > bestFit) { best = c; bestFit = f; }
+      });
+      if (best) {
+        const n = Math.min(remaining, bestFit);
+        place(best, item, n);
+        remaining -= n;
+      }
+
+      if (remaining > 0) {
+        const c = openNew();
+        const fit = maxFit(c, item);
+        if (fit >= remaining) {
+          place(c, item, remaining);
+        } else {
+          place(c, item, fit);
+          remaining -= fit;
+          let extraParts = 1;
+          while (remaining > 0) {
+            const cc = openNew();
+            const f2 = maxFit(cc, item);
+            if (f2 <= 0) {
+              warnings.push('物料「' + item.name + '」单箱体积或毛重超过柜型上限，无法完整排入');
+              break;
+            }
+            const n2 = Math.min(remaining, f2);
+            place(cc, item, n2);
+            remaining -= n2;
+            extraParts += 1;
+          }
+          if (extraParts > 1) {
+            warnings.push('物料「' + item.name + '」因体量过大被拆分到 ' + (extraParts + 1) + ' 个柜');
+          }
+        }
+      }
+    });
+
+    // 末柜降档
+    if (open.length > 0) {
+      const last = open[open.length - 1];
+      const small = CONTAINER_TYPES[SMALL_TYPE[temp]];
+      if (last.usedVol <= small.maxVol + 1e-6 && last.usedWeight <= small.maxWeight + 1e-6) {
+        last.type = small.key;
+        last.typeName = small.name;
+        last.maxVol = small.maxVol;
+        last.maxWeight = small.maxWeight;
+      }
+    }
+  });
+
+  const total = containers.reduce(function (acc, c) {
+    acc.vol += c.usedVol;
+    acc.net += c.items.reduce(function (s, it) { return s + it.perNet * it.boxes; }, 0);
+    acc.weight += c.usedWeight;
+    acc.boxes += c.items.reduce(function (s, it) { return s + it.boxes; }, 0);
+    acc.items += c.items.length;
+    return acc;
+  }, { vol: 0, net: 0, weight: 0, boxes: 0, items: 0 });
+
+  const combo = {};
+  containers.forEach(function (c) { combo[c.typeName] = (combo[c.typeName] || 0) + 1; });
+
+  return {
+    orderNo: orderNo,
+    containers: containers,
+    total: { vol: round(total.vol, 3), net: round(total.net, 2), weight: round(total.weight, 2), boxes: total.boxes, items: total.items },
+    combo: combo,
+    warnings: warnings,
+  };
+}
+
+// ============ 工具函数 ============
+const FIELDS = ['物料编码', '物料名称', '大类', '厂家', '温度属性', '箱数', '单箱体积', '单箱净重', '单箱毛重'];
+const RESULT_HEADERS = [
+  '序号', '大类', '物料编码', '物料名称', '厂家', '温度属性', '箱数',
+  '单箱体积(CBM)', '总体积(CBM)', '单箱净重(KG)', '总净重(KG)',
+  '单箱毛重(KG)', '总毛重(KG)', '柜型', '体积利用率', '重量利用率', '备注', '柜号',
+];
+
+const KEY_ALIAS = {
+  '物料编码': '物料编码', '物料编号': '物料编码', '编码': '物料编码', '料号': '物料编码', '物料号': '物料编码', 'SKU': '物料编码', 'sku': '物料编码', 'code': '物料编码',
+  '物料名称': '物料名称', '物料': '物料名称', '品名': '物料名称', '名称': '物料名称', 'name': '物料名称',
+  '大类': '大类', '类别': '大类', '分类': '大类', 'category': '大类',
+  '厂家': '厂家', '厂商': '厂家', '供应商': '厂家', 'factory': '厂家',
+  '温度属性': '温度属性', '温度': '温度属性', '温区': '温度属性', 'temp': '温度属性',
+  '箱数': '箱数', '件数': '箱数', '数量': '箱数', 'boxes': '箱数',
+  '单箱体积': '单箱体积', '体积': '单箱体积', 'perVol': '单箱体积',
+  '单箱净重': '单箱净重', '净重': '单箱净重', 'perNet': '单箱净重',
+  '单箱毛重': '单箱毛重', '毛重': '单箱毛重', 'perWeight': '单箱毛重',
+};
+
+function parseCSV(text) {
+  const rows = [];
+  let cur = '', row = [], inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ',' || ch === '\t') { row.push(cur); cur = ''; }
+      else if (ch === '\n' || ch === '\r') {
+        if (ch === '\r' && text[i + 1] === '\n') i++;
+        row.push(cur); cur = ''; rows.push(row); row = [];
+      } else cur += ch;
+    }
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(function (r) { return r.some(function (c) { return String(c).trim() !== ''; }); });
+}
+
+function headerToKeys(headerRow) {
+  const keys = [];
+  headerRow.forEach(function (h) {
+    const hh = String(h).trim();
+    keys.push(KEY_ALIAS[hh] || KEY_ALIAS[hh.toLowerCase()] || null);
+  });
+  return keys;
+}
+
+function rowsFromTable(grid) {
+  if (!grid || grid.length === 0) return [];
+  const header = grid[0];
+  const keys = headerToKeys(header);
+  const hasHeader = keys.filter(Boolean).length >= 3;
+  const dataRows = hasHeader ? grid.slice(1) : grid.slice();
+  const finalKeys = hasHeader ? keys : FIELDS.slice();
+
+  return dataRows.map(function (r) {
+    const obj = {};
+    finalKeys.forEach(function (k, i) {
+      if (k) obj[k] = r[i] == null ? '' : String(r[i]).trim();
+    });
+    if (!hasHeader) {
+      // 无表头时按列顺序填充标准字段
+      const o2 = {};
+      FIELDS.forEach(function (f, i) { o2[f] = r[i] == null ? '' : String(r[i]).trim(); });
+      return o2;
+    }
+    return obj;
+  });
+}
+
+// ============ 应用状态 ============
+let rows = [];
+let orderNo = '';
+let currentResult = null;
+
+const $ = function (id) { return document.getElementById(id); };
+
+function blankRow() {
+  return { '物料编码': '', '物料名称': '', '大类': '食材', '厂家': '', '温度属性': '常温', '箱数': '', '单箱体积': '', '单箱净重': '', '单箱毛重': '' };
+}
+
+function renderDataTable() {
+  const tbody = $('data-body');
+  tbody.innerHTML = '';
+  rows.forEach(function (r, i) {
+    const tr = document.createElement('tr');
+    const tdIdx = document.createElement('td');
+    tdIdx.style.textAlign = 'center';
+    tdIdx.style.color = '#94a3b8';
+    tdIdx.textContent = i + 1;
+    tr.appendChild(tdIdx);
+
+    FIELDS.forEach(function (f) {
+      const td = document.createElement('td');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = r[f] != null ? r[f] : '';
+      input.placeholder = f;
+      input.addEventListener('input', function (e) { r[f] = e.target.value; });
+      td.appendChild(input);
+      tr.appendChild(td);
+    });
+
+    const tdDel = document.createElement('td');
+    tdDel.style.textAlign = 'center';
+    const del = document.createElement('button');
+    del.className = 'del';
+    del.textContent = '删除';
+    del.addEventListener('click', function () {
+      rows = rows.filter(function (_, idx) { return idx !== i; });
+      renderDataTable();
+    });
+    tdDel.appendChild(del);
+    tr.appendChild(tdDel);
+    tbody.appendChild(tr);
+  });
+
+  if (rows.length === 0) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 11;
+    td.style.textAlign = 'center';
+    td.style.color = '#94a3b8';
+    td.style.padding = '24px 0';
+    td.textContent = '暂无数据，可手动添加、粘贴数据、导入 CSV 或加载示例';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+}
+
+const SAMPLE = [
+  { '物料编码': 'M001', '物料名称': '冷冻牛肉', '大类': '食材', '厂家': 'A食品厂', '温度属性': '冷冻', '箱数': 160, '单箱体积': 0.05, '单箱净重': 15, '单箱毛重': 16.2 },
+  { '物料编码': 'M002', '物料名称': '冷冻鸡肉', '大类': '食材', '厂家': 'A食品厂', '温度属性': '冷冻', '箱数': 260, '单箱体积': 0.04, '单箱净重': 10, '单箱毛重': 11 },
+  { '物料编码': 'M003', '物料名称': '冷冻水饺', '大类': '食材', '厂家': 'B食品厂', '温度属性': '冷冻', '箱数': 300, '单箱体积': 0.035, '单箱净重': 8, '单箱毛重': 9 },
+  { '物料编码': 'M004', '物料名称': '大米', '大类': '食材', '厂家': 'C粮厂', '温度属性': '常温', '箱数': 400, '单箱体积': 0.06, '单箱净重': 20, '单箱毛重': 21 },
+  { '物料编码': 'M005', '物料名称': '食用油', '大类': '食材', '厂家': 'C粮厂', '温度属性': '常温', '箱数': 220, '单箱体积': 0.08, '单箱净重': 25, '单箱毛重': 26 },
+  { '物料编码': 'M006', '物料名称': '调味料', '大类': '食材', '厂家': 'D调味厂', '温度属性': '常温', '箱数': 180, '单箱体积': 0.03, '单箱净重': 5, '单箱毛重': 5.5 },
+  { '物料编码': 'M007', '物料名称': '包装纸箱', '大类': '包材', '厂家': 'E包材厂', '温度属性': '常温', '箱数': 300, '单箱体积': 0.02, '单箱净重': 2, '单箱毛重': 2.4 },
+  { '物料编码': 'M008', '物料名称': '不锈钢设备', '大类': '设备', '厂家': 'F设备厂', '温度属性': '常温', '箱数': 12, '单箱体积': 1.1, '单箱净重': 320, '单箱毛重': 340 },
+];
+
+// ============ Tab 切换 ============
+document.querySelectorAll('.tab-btn').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    document.querySelectorAll('.section').forEach(function (s) { s.classList.remove('active'); });
+    $('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach(function (b) {
+    b.classList.toggle('active', b.dataset.tab === name);
+  });
+  document.querySelectorAll('.section').forEach(function (s) { s.classList.remove('active'); });
+  $('tab-' + name).classList.add('active');
+}
+
+// ============ 事件绑定 ============
+$('btn-add').addEventListener('click', function () { rows.push(blankRow()); renderDataTable(); });
+$('btn-clear').addEventListener('click', function () { rows = []; renderDataTable(); });
+$('btn-sample').addEventListener('click', function () {
+  rows = SAMPLE.map(function (r) { return Object.assign({}, r); });
+  $('order-no').value = 'PO20260813';
+  orderNo = 'PO20260813';
+  renderDataTable();
+});
+$('order-no').addEventListener('input', function (e) { orderNo = e.target.value; });
+
+// CSV 导入
+$('btn-import').addEventListener('click', function () { $('file-input').click(); });
+$('file-input').addEventListener('change', function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    const grid = parseCSV(String(reader.result));
+    if (!grid.length) { window.alert('文件中没有数据'); return; }
+    rows = rowsFromTable(grid);
+    renderDataTable();
+    switchTab('data');
+  };
+  reader.onerror = function () { window.alert('读取文件失败'); };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// 粘贴
+$('btn-paste').addEventListener('click', function () { $('paste-modal').classList.add('open'); $('paste-text').focus(); });
+$('paste-cancel').addEventListener('click', function () { $('paste-modal').classList.remove('open'); });
+$('paste-modal').addEventListener('click', function (e) { if (e.target === $('paste-modal')) $('paste-modal').classList.remove('open'); });
+$('paste-ok').addEventListener('click', function () {
+  const text = $('paste-text').value;
+  const grid = parseCSV(text);
+  if (!grid.length) { window.alert('没有解析到数据'); return; }
+  rows = rowsFromTable(grid);
+  renderDataTable();
+  $('paste-modal').classList.remove('open');
+  switchTab('data');
+});
+
+// ============ 结果构建 ============
+function r2(v, d) { d = d == null ? 2 : d; const n = Number(v); return isFinite(n) ? Math.round(n * Math.pow(10, d)) / Math.pow(10, d) : 0; }
+function pct(v) { return (v * 100).toFixed(1) + '%'; }
+
+function buildResultRows(result) {
+  if (!result) return [];
+  const rows = [];
+  let seq = 0;
+  result.containers.forEach(function (c) {
+    const uniqueNames = Array.from(new Set(c.items.map(function (it) { return it.name; })));
+    const boxCount = c.items.reduce(function (s, it) { return s + it.boxes; }, 0);
+    const totalNet = c.items.reduce(function (s, it) { return s + it.perNet * it.boxes; }, 0);
+    const volUtil = c.usedVol / c.maxVol;
+    const wtUtil = c.usedWeight / c.maxWeight;
+
+    c.items.forEach(function (it) {
+      seq += 1;
+      rows.push({
+        type: 'item',
+        cells: [
+          seq, it.category, it.code, it.name, it.factory, it.temp, it.boxes,
+          r2(it.perVol, 3), r2(it.perVol * it.boxes, 3),
+          r2(it.perNet, 2), r2(it.perNet * it.boxes, 2),
+          r2(it.perWeight, 2), r2(it.perWeight * it.boxes, 2),
+          c.typeName, '', '', '',
+        ],
+        q: c.id,
+      });
+    });
+
+    rows.push({
+      type: 'subtotal',
+      cells: [
+        '合计', uniqueNames.length + ' 种货物', '', c.typeName, '', c.temp, boxCount,
+        '', r2(c.usedVol, 3), '', r2(totalNet, 2), '', r2(c.usedWeight, 2),
+        c.typeName, pct(volUtil), pct(wtUtil), '',
+      ],
+      q: c.id,
+    });
+  });
+
+  const combo = Object.keys(result.combo).map(function (k) { return k + ' × ' + result.combo[k]; }).join(' + ');
+  rows.push({
+    type: 'total',
+    cells: [
+      '总计', '', '', '柜型组合：' + combo, '', '', result.total.boxes,
+      '', r2(result.total.vol, 3), '', r2(result.total.net, 2),
+      '', r2(result.total.weight, 2), '', '', '', '',
+    ],
+    q: '',
+  });
+  return rows;
+}
+
+function cellAlign(type, ci) {
+  if (ci === 0) return 'center';
+  if (ci === 1 || ci === 2 || ci === 3 || ci === 4 || ci === 5 || ci === 13 || ci === 16) return 'left';
+  return 'right';
+}
+
+function escapeHtml(v) {
+  return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderResult(result) {
+  currentResult = result;
+  if (!result) {
+    $('result-empty').style.display = 'block';
+    $('result-wrap').style.display = 'none';
+    $('result-warnings').innerHTML = '';
+    return;
+  }
+  $('result-empty').style.display = 'none';
+  $('result-wrap').style.display = 'block';
+
+  const warnHtml = result.warnings.length
+    ? '<div class="warn-box"><b>提示：</b><ul>' + result.warnings.map(function (w) { return '<li>' + escapeHtml(w) + '</li>'; }).join('') + '</ul></div>'
+    : '';
+  $('result-warnings').innerHTML = warnHtml;
+
+  const rows = buildResultRows(result);
+  let html = '<table><thead>';
+  html += '<tr><th colspan="18" class="title-row">订单号：' + escapeHtml(result.orderNo || '（未填写）') + '</th></tr>';
+  html += '<tr class="head-row">' + RESULT_HEADERS.map(function (h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('') + '</tr>';
+  html += '</thead><tbody>';
+
+  rows.forEach(function (r) {
+    if (r.type === 'item') {
+      html += '<tr class="bg-white">';
+      r.cells.forEach(function (v, ci) {
+        html += '<td style="text-align:' + cellAlign('item', ci) + ';">' + (v === '' ? '' : escapeHtml(v)) + '</td>';
+      });
+      html += '<td class="q-col item-q">' + escapeHtml(r.q) + '</td></tr>';
+    } else if (r.type === 'subtotal') {
+      html += '<tr class="subtotal-row">';
+      r.cells.forEach(function (v, ci) {
+        html += '<td style="text-align:' + cellAlign('subtotal', ci) + ';">' + (v === '' ? '' : escapeHtml(v)) + '</td>';
+      });
+      html += '<td class="q-col">' + escapeHtml(r.q) + '</td></tr>';
+    } else {
+      html += '<tr class="total-row">';
+      r.cells.forEach(function (v, ci) {
+        html += '<td style="text-align:' + cellAlign('total', ci) + ';">' + (v === '' ? '' : escapeHtml(v)) + '</td>';
+      });
+      html += '<td></td></tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  $('result-wrap').innerHTML = html;
+}
+
+// 开始排柜
+$('btn-calc').addEventListener('click', function () {
+  orderNo = $('order-no').value;
+  if (!rows.length) { window.alert('请先添加货物数据'); return; }
+  const result = runPaigui(rows, { orderNo: orderNo });
+  renderResult(result);
+  switchTab('result');
+});
+
+$('btn-back').addEventListener('click', function () { switchTab('data'); });
+$('btn-export-xlsx').addEventListener('click', exportColorXlsx);
+
+// 导出带颜色 Excel（xlsx-js-style）
+function exportColorXlsx() {
+  if (!currentResult) return;
+  if (typeof XLSX === 'undefined') {
+    window.alert('xlsx 库尚未加载（需联网），请改用「导出 CSV」');
+    return;
+  }
+  const rows = buildResultRows(currentResult);
+  const aoa = [];
+  aoa.push(['订单号：' + (currentResult.orderNo || '（未填写）')]);
+  aoa.push(RESULT_HEADERS);
+  rows.forEach(function (r) { aoa.push(r.cells.concat([r.q])); });
+
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const DARKRED = '8B0000', WHITE = 'FFFFFF', LIGHTYELLOW = 'FFF2CC', YELLOW = 'FFFF00';
+
+  function styleCell(r, c, s) {
+    const addr = XLSX.utils.encode_cell({ r: r, c: c });
+    if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+    ws[addr].s = Object.assign({}, ws[addr].s, s);
+  }
+  function fillRow(r, color, opts) {
+    opts = opts || {};
+    for (let c = 0; c < RESULT_HEADERS.length; c++) {
+      styleCell(r, c, {
+        fill: { patternType: 'solid', fgColor: { rgb: color } },
+        font: { bold: !!opts.bold, color: { rgb: opts.fontColor || '000000' } },
+      });
+    }
+  }
+
+  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: RESULT_HEADERS.length - 1 } }];
+  fillRow(0, DARKRED, { bold: true, fontColor: WHITE });
+  fillRow(1, LIGHTYELLOW, { bold: true });
+
+  rows.forEach(function (r, i) {
+    const rowIdx = 2 + i;
+    if (r.type === 'subtotal') {
+      fillRow(rowIdx, YELLOW, { bold: true });
+    } else if (r.type === 'total') {
+      fillRow(rowIdx, WHITE, { bold: true });
+    } else {
+      fillRow(rowIdx, WHITE, { bold: false });
+      styleCell(rowIdx, RESULT_HEADERS.length - 1, {
+        fill: { patternType: 'solid', fgColor: { rgb: 'FFFDE7' } },
+        font: { bold: true, color: { rgb: '000000' } },
+      });
+    }
+  });
+
+  for (let i = 2; i < aoa.length; i++) {
+    for (let c = 0; c < RESULT_HEADERS.length; c++) {
+      const addr = XLSX.utils.encode_cell({ r: i, c: c });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      ws[addr].s = Object.assign({ alignment: { horizontal: cellAlign(rows[i - 2].type, c) } }, ws[addr].s || {});
+    }
+  }
+
+  ws['!cols'] = RESULT_HEADERS.map(function (h, i) {
+    return { wch: i === 2 || i === 3 ? 14 : (i === 0 ? 6 : 10) };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '排柜结果');
+  XLSX.writeFile(wb, '排柜结果_' + (currentResult.orderNo || '未命名') + '.xlsx');
+}
+
+// 导出 CSV
+$('btn-export').addEventListener('click', function () {
+  if (!currentResult) return;
+  const rows = buildResultRows(currentResult);
+  const lines = [RESULT_HEADERS.join(',')];
+  rows.forEach(function (r) {
+    const cells = r.cells.concat([r.q]);
+    lines.push(cells.map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(','));
+  });
+  const blob = new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '排柜结果_' + (currentResult.orderNo || '未命名') + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+// 初始化
+renderDataTable();
+</script>
+</body>
+</html>
